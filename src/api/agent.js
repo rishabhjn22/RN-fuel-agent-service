@@ -1,30 +1,30 @@
 import axios from 'axios';
-import { Platform } from 'react-native';
-
-// Use 10.0.2.2 for Android Emulator, localhost for iOS Simulator
-const BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG } from '../config/api';
 
 const api = axios.create({
-    baseURL: BASE_URL,
-    headers: {
-        'Content-Type': 'multipart/form-data',
-    },
+  baseURL: API_CONFIG.BASE_URL,
+  headers: { 'Content-Type': 'application/json' },
 });
 
-export const sendMessage = async (text, latitude = 0, longitude = 0, userId = 'user_123') => {
-    try {
-        const formData = new FormData();
-        formData.append('text', text);
-        formData.append('latitude', String(latitude));
-        formData.append('longitude', String(longitude));
-        formData.append('user_id', userId);
+const getUserId = async () => {
+  let id = await AsyncStorage.getItem('fuel_user_id');
+  if (!id) {
+    id = `user_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    await AsyncStorage.setItem('fuel_user_id', id);
+  }
+  return id;
+};
 
-        console.log('Sending message to:', `${BASE_URL}/chat`, formData);
+export const sendMessage = async (text, latitude, longitude) => {
+  const user_id = await getUserId();
 
-        const response = await api.post('/chat', formData);
-        return response.data;
-    } catch (error) {
-        console.error('API Error:', error);
-        throw error;
-    }
+  const response = await api.post('/chat', {
+    text,
+    latitude,
+    longitude,
+    user_id,
+  });
+
+  return response.data;
 };
